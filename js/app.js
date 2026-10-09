@@ -1,6 +1,3 @@
-// Telas do sistema. Depois de qualquer alteração chama carregar() de novo,
-// assim todas as telas mostram o mesmo saldo.
-
 let categorias = [];
 let produtos = [];
 let movimentacoes = [];
@@ -21,7 +18,7 @@ async function carregar() {
             Banco.listarMovimentacoes(),
             Banco.listarSaldos()
         ]);
-        // o saldo vem calculado do banco (view vw_saldos), a tela não soma nada
+        // saldo vem da view vw_saldos
         saldos = {};
         listaSaldos.forEach(s => { saldos[s.produto_id] = { saldo: s.saldo, ultimaSaida: s.ultima_saida }; });
         mostrarPainel();
@@ -37,7 +34,7 @@ async function carregar() {
 }
 
 
-// ---------- navegação ----------
+// navegação
 
 function abrirTela() {
     let tela = location.hash.slice(1);
@@ -48,7 +45,7 @@ function abrirTela() {
 window.addEventListener('hashchange', abrirTela);
 
 
-// ---------- painel ----------
+// painel
 
 let filtroPainel = 'todos';
 
@@ -59,7 +56,7 @@ function mostrarPainel() {
     hoje.setHours(0, 0, 0, 0);
     $('hoje').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-    // ultima movimentação de cada produto
+    // ultima movimentação
     const ultimaMov = {};
     movimentacoes.forEach(m => { ultimaMov[m.produto_id] = m.criado_em; });
 
@@ -105,7 +102,6 @@ function mostrarPainel() {
           </tr>`).join('')
         : '<tr><td colspan="9" class="vazio">Nenhum produto encontrado.</td></tr>';
 
-    // saldo depois de cada lançamento, pra conferir
     const corrente = {};
     const depois = movimentacoes.map(m => {
         corrente[m.produto_id] = (corrente[m.produto_id] || 0) + (m.tipo === 'entrada' ? m.quantidade : -m.quantidade);
@@ -133,7 +129,7 @@ function filtrarPainel(ev) {
     mostrarPainel();
 }
 
-// leitor de código de barras: o leitor USB digita o código e aperta Enter
+// leitor de código de barras
 async function lerCodigo(ev) {
     ev.preventDefault();
     const campo = $('leitor-codigo');
@@ -163,7 +159,7 @@ async function lerCodigo(ev) {
     campo.focus();
 }
 
-// código que ainda não existe: abre o cadastro com o código preenchido
+// código novo abre o cadastro
 function cadastrarCodigo(cod) {
     avisar(`Código ${cod} não cadastrado. Preencha o produto.`, 'erro');
     location.hash = 'produtos';
@@ -172,7 +168,6 @@ function cadastrarCodigo(cod) {
     $('p-codigo').value = cod;
 }
 
-// botões de entrada/saída do painel: abre o lançamento já preenchido
 function lancarDireto(tipo, id) {
     document.querySelector(`input[name=tipo][value=${tipo}]`).checked = true;
     trocouTipo();
@@ -185,7 +180,7 @@ function lancarDireto(tipo, id) {
 }
 
 
-// ---------- lançar entrada / saída ----------
+// lançar entrada / saída
 
 function tipoEscolhido() {
     return document.querySelector('input[name=tipo]:checked').value;
@@ -199,7 +194,6 @@ function trocouTipo() {
 
 function mostrarListaLancar() {
     const termo = $('mov-busca').value.trim().toLowerCase();
-    // se for um código de barras cadastrado, já seleciona o produto
     const pelCodigo = produtos.find(p => p.codigo_barras && p.codigo_barras === termo);
     if (pelCodigo) {
         $('mov-produto').innerHTML = `<option value="${pelCodigo.id}">${esc(pelCodigo.nome)} (${saldoDe(pelCodigo.id)})</option>`;
@@ -276,10 +270,9 @@ function mostrarHistorico() {
 }
 
 
-// ---------- produtos ----------
+// produtos
 
 function mostrarProdutos() {
-    // monta o filtro mantendo a opção escolhida
     const filtro = $('prod-filtro').value || 'todos';
     $('prod-filtro').innerHTML = '<option value="todos">Todas as categorias</option>'
         + '<option value="repor">Abaixo do mínimo</option>'
@@ -325,7 +318,7 @@ function abrirFormProduto(p) {
     $('p-custo').value = p ? p.custo : '';
     $('p-venda').value = p ? p.preco_venda : '';
     $('p-minimo').value = p ? p.estoque_minimo : '';
-    // estoque inicial só no cadastro; depois o saldo muda só por entrada e saída
+    // estoque inicial so no cadastro
     $('p-inicial').value = 0;
     $('p-inicial-campo').classList.toggle('escondido', !!p);
     $('form-produto').classList.remove('escondido');
@@ -362,7 +355,7 @@ async function salvarProduto(ev) {
 
     try {
         const novoId = await Banco.salvarProduto(dados);
-        // o estoque inicial entra como uma entrada, assim o saldo continua calculado
+        // estoque inicial entra como entrada
         if (inicial > 0) await Banco.registrarMovimentacao(novoId, 'entrada', inicial, 'Estoque inicial');
         fecharFormProduto();
         avisar(id ? 'Produto alterado.' : 'Produto cadastrado.', 'ok');
@@ -386,7 +379,7 @@ async function excluirProduto(id) {
 }
 
 
-// ---------- categorias ----------
+// categorias
 
 function mostrarCategorias() {
     $('tab-categorias').innerHTML = categorias.length
@@ -433,7 +426,7 @@ async function excluirCategoria(id) {
 }
 
 
-// ---------- relatório ----------
+// relatório
 
 let filtroGiro = 'todos';
 
@@ -445,7 +438,7 @@ function mostrarRelatorio() {
     const inicio = new Date(Date.now() - dias * 86400000);
     $('abc-periodo').textContent = `De ${inicio.toLocaleDateString('pt-BR')} até hoje`;
 
-    // resumo: quantos produtos e quanto do valor vendido cada classe tem
+    // resumo por classe
     const resumoClasse = c => {
         const da = linhas.filter(l => l.classe === c && !l.parado);
         const valor = da.reduce((t, l) => t + l.valorVendido, 0);
@@ -495,10 +488,8 @@ function filtrarGiro(ev) {
 }
 
 
-// ---------- PIN ----------
+// PIN
 
-// abre a janela do PIN e devolve o PIN digitado (ou null se cancelar).
-// Confere o PIN antes de fechar pra pessoa poder tentar de novo.
 function pedirPin(texto) {
     const dlg = $('dlg-pin');
     $('dlg-texto').textContent = texto;
@@ -526,12 +517,11 @@ function pedirPin(texto) {
 }
 
 
-// ---------- início ----------
+// início
 
 $('form-mov').addEventListener('submit', salvarMovimentacao);
 document.querySelectorAll('input[name=tipo]').forEach(r => r.addEventListener('change', trocouTipo));
 $('mov-busca').addEventListener('input', mostrarListaLancar);
-// depois de bipar no Lançar, o Enter do leitor vai para a quantidade
 $('mov-busca').addEventListener('keydown', ev => {
     if (ev.key === 'Enter') { ev.preventDefault(); $('mov-qtd').select(); }
 });
@@ -551,13 +541,12 @@ $('giro-busca').addEventListener('input', () => { primeiraPagina('giro'); mostra
 $('pos-abas').addEventListener('click', filtrarPainel);
 $('form-leitor').addEventListener('submit', ev => ev.preventDefault());
 $('leitor-codigo').addEventListener('keydown', ev => { if (ev.key === 'Enter') lerCodigo(ev); });
-// o leitor manda Enter depois do código: no cadastro só passa para o próximo campo
 $('p-codigo').addEventListener('keydown', ev => {
     if (ev.key === 'Enter') { ev.preventDefault(); $('p-custo').focus(); }
 });
 $('pos-busca').addEventListener('input', () => { primeiraPagina('posicao'); mostrarPainel(); });
 
-// na impressão do relatório sai a lista inteira, não só a página aberta
+// imprime a lista inteira
 let tamanhoAntes;
 window.addEventListener('beforeprint', () => {
     tamanhoAntes = paginas.giro.tamanho;

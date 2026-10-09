@@ -1,8 +1,3 @@
-// Acesso ao Supabase. A tela só usa as funções do objeto Banco.
-// Cadastro, edição e exclusão passam por funções no banco que conferem o PIN
-// (ver supabase/schema.sql), então o PIN não fica no código do site.
-
-// se a biblioteca não carregou (sem internet), sb fica null e as funções avisam
 const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 function checarErro(error) {
@@ -11,7 +6,7 @@ function checarErro(error) {
     throw new Error(error.message);
 }
 
-// o Supabase devolve no máximo 1000 linhas por consulta
+// supabase devolve no maximo 1000 linhas
 async function buscarTodos(tabela, ordem) {
     if (!sb) throw new Error('não foi possível conectar. Verifique a internet.');
     const linhas = [];
@@ -38,7 +33,6 @@ const Banco = {
         return buscarTodos('movimentacoes', 'criado_em');
     },
 
-    // saldo de cada produto calculado no banco (view vw_saldos)
     listarSaldos() {
         return buscarTodos('vw_saldos', 'produto_id');
     },
@@ -55,7 +49,6 @@ const Banco = {
         return data === true;
     },
 
-    // devolve o id do produto
     async salvarProduto(p) {
         const args = {
             p_pin: null,
@@ -66,7 +59,6 @@ const Banco = {
             p_preco_venda: p.preco_venda,
             p_estoque_minimo: p.estoque_minimo
         };
-        // só manda o código se tiver, assim funciona antes de rodar supabase/codigo_barras.sql
         if (p.codigo_barras) args.p_codigo_barras = p.codigo_barras;
         const { data, error } = await sb.rpc('salvar_produto', args);
         checarErro(error);

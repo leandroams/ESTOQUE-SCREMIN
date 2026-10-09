@@ -1,10 +1,6 @@
-// Regras do estoque. Não acessa banco nem tela, por isso dá pra testar
-// separado (testes/estoque.test.js).
-
 (function (global) {
 
-    // saldo de cada produto = entradas - saídas
-    // retorna { produto_id: { entradas, saidas, saldo, ultimaSaida } }
+    // saldo = entradas - saídas
     function calcularSaldos(movimentacoes) {
         const mapa = {};
         for (const m of movimentacoes || []) {
@@ -24,7 +20,6 @@
         return mapa;
     }
 
-    // retorna a mensagem de erro, ou null se puder lançar
     function validarMovimentacao(tipo, quantidade, saldoAtual) {
         if (tipo !== 'entrada' && tipo !== 'saida') return 'Escolha entrada ou saída.';
         const qtd = Number(quantidade);
@@ -40,7 +35,6 @@
         return 'ok';
     }
 
-    // produtos no mínimo ou abaixo, os mais críticos primeiro
     function produtosAbaixoDoMinimo(produtos, saldos) {
         return (produtos || [])
             .map(p => {
@@ -51,9 +45,7 @@
             .sort((a, b) => (a.saldo - a.estoque_minimo) - (b.saldo - b.estoque_minimo));
     }
 
-    // Curva ABC pelo valor vendido (qtd x preço de venda) nos últimos `dias`.
-    // A até 80% do total acumulado, B até 95%, C o resto.
-    // Produto sem saída no período fica como C e marcado como parado.
+    // curva ABC: A até 80%, B até 95%, C o resto
     function curvaABC(produtos, movimentacoes, dias = 30, agora = new Date()) {
         const inicio = new Date(agora.getTime() - dias * 86400000).toISOString();
         const vendido = {};
@@ -83,7 +75,6 @@
         const total = linhas.reduce((t, l) => t + l.valorVendido, 0);
         let acumulado = 0;
         for (const l of linhas) {
-            // usa o acumulado de antes do item: quem passa dos 80% ainda é A
             const antes = total > 0 ? acumulado / total : 1;
             acumulado += l.valorVendido;
             l.percentual = total > 0 ? l.valorVendido / total : 0;

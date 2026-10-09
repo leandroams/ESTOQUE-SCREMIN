@@ -1,4 +1,3 @@
-// testes das regras de estoque: npm test
 const test = require('node:test');
 const assert = require('node:assert');
 const E = require('../js/estoque.js');

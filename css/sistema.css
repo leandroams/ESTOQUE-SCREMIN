@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap');
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -15,7 +16,7 @@ button { cursor: pointer; }
 .centro, main { max-width: 1200px; margin: 0 auto; }
 
 
-/* ===== Cabeçalho ===== */
+/* cabeçalho*/
 .barra { margin-bottom: 15px; }
 .barra .centro {
     background: #fff;
@@ -55,7 +56,7 @@ button { cursor: pointer; }
 .barra nav a.ativo { background: #fff0f0; border-color: #dc3545; color: #b30000; }
 
 
-/* ===== Telas ===== */
+/*telas */
 .tela { display: none; }
 .tela.ativa { display: block; }
 
@@ -84,7 +85,7 @@ h2 {
 .sub::first-letter { text-transform: uppercase; }
 
 
-/* ===== Cartões ===== */
+/*Cartões*/
 .cartao {
     background: #fff;
     border-radius: 12px;
@@ -93,7 +94,7 @@ h2 {
 }
 .cartao { padding: 20px; }
 
-/* ===== Painel: resumo e grade de estoque ===== */
+/* resumo e grade de estoque*/
 .resumo {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -193,7 +194,7 @@ td.acoes .btn:hover { transform: none; background: #f0f2f5; }
 .cabecalho > div .btn + .btn { margin-left: 6px; }
 
 
-/* painel em duas colunas: grade à esquerda, leitor e últimos lançamentos à direita */
+/* grade à esquerda, leitor e últimos lançamentos direita */
 .painel-corpo { display: grid; grid-template-columns: 1fr 300px; gap: 15px; align-items: start; }
 .painel-corpo aside h2 { margin-top: 0; }
 .leitor { padding: 14px; }
@@ -206,7 +207,7 @@ td.acoes .btn:hover { transform: none; background: #f0f2f5; }
 .leitor .info { font-size: 13px; margin-bottom: 0; }
 
 
-/* ===== Tabelas ===== */
+
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th {
     border-bottom: 2px solid #f0f0f0;
@@ -230,7 +231,7 @@ tr.zerado td:first-child { color: #b30000; font-weight: 600; }
 .saida-txt { color: #dc3545; font-weight: 600; }
 
 
-/* ===== Formulários ===== */
+/*forms*/
 label {
     display: block;
     font-size: 13px;
@@ -291,7 +292,7 @@ h2 select.pequeno { font-size: 13px; padding: 5px 10px; font-weight: 400; }
 .info { color: #666; font-size: 14px; margin: 6px 0; min-height: 20px; }
 
 
-/* ===== Botões ===== */
+/* botao */
 .btn {
     display: inline-block;
     padding: 12px 16px;
@@ -326,7 +327,7 @@ td .btn.entrada { background: #28a745; color: #fff; }
 .escondido { display: none !important; }
 
 
-/* ===== Janela do PIN ===== */
+/*PIN */
 dialog {
     margin: auto;
     border: none;
@@ -344,7 +345,7 @@ dialog .botoes { display: flex; gap: 8px; }
 dialog .botoes .btn { flex: 1; }
 
 
-/* ===== Aviso (toast) ===== */
+
 #aviso {
     position: fixed;
     left: 50%;

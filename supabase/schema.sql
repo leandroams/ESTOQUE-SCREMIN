@@ -1,10 +1,4 @@
--- Banco do controle de estoque da Distribuidora Scremin.
--- Rodar inteiro no SQL Editor do Supabase.
---
--- categorias (1) - (N) produtos (1) - (N) movimentacoes
--- O saldo não é guardado: a view vw_saldos soma entradas e subtrai saídas.
-
--- Tabelas
+-- tabelas
 create table if not exists categorias (
     id         bigint generated always as identity primary key,
     nome       text not null unique,
@@ -19,7 +13,7 @@ create table if not exists produtos (
     preco_venda     numeric(10,2) not null default 0 check (preco_venda >= 0),
     estoque_minimo  integer not null default 0 check (estoque_minimo >= 0),
     codigo_barras   text unique,
-    ativo           boolean not null default true,   -- excluir só desativa, pra manter o histórico
+    ativo           boolean not null default true,   -- excluir so desativa
     criado_em       timestamptz not null default now()
 );
 
@@ -34,18 +28,16 @@ create table if not exists movimentacoes (
 create index if not exists idx_mov_produto on movimentacoes(produto_id);
 create index if not exists idx_mov_data    on movimentacoes(criado_em);
 
--- PIN fica aqui. Sem política de leitura, o site não consegue ler,
--- só as funções abaixo comparam.
+-- pin
 create table if not exists configuracoes (
     chave  text primary key,
     valor  text not null
 );
 insert into configuracoes (chave, valor) values ('pin', '1234')
 on conflict (chave) do nothing;
--- trocar o PIN: update configuracoes set valor = 'NOVO_PIN' where chave = 'pin';
 
 
--- Saldo
+-- saldo
 create or replace view vw_saldos as
 select p.id as produto_id,
        coalesce(sum(case when m.tipo = 'entrada' then m.quantidade end), 0)
@@ -56,14 +48,13 @@ left join movimentacoes m on m.produto_id = p.id
 group by p.id;
 
 
--- Não deixa sair mais do que tem
+-- nao deixa sair mais do que tem
 create or replace function checar_saida()
 returns trigger language plpgsql as $$
 declare
     saldo_atual integer;
 begin
     if new.tipo = 'saida' then
-        -- trava o produto pra duas saídas ao mesmo tempo não passarem do saldo
         perform 1 from produtos where id = new.produto_id for update;
         select saldo into saldo_atual from vw_saldos where produto_id = new.produto_id;
         if coalesce(saldo_atual, 0) < new.quantidade then
@@ -80,7 +71,7 @@ before insert on movimentacoes
 for each row execute function checar_saida();
 
 
--- Funções que pedem PIN
+-- funções
 create or replace function pin_valido(p_pin text)
 returns boolean language sql security definer set search_path = public as $$
     select exists (select 1 from configuracoes where chave = 'pin' and valor = p_pin);
@@ -133,13 +124,11 @@ create or replace function excluir_categoria(p_pin text, p_id bigint)
 returns void language plpgsql security definer set search_path = public as $$
 begin
     if not pin_valido(p_pin) then raise exception 'PIN incorreto'; end if;
-    delete from categorias where id = p_id;   -- produtos ficam "sem categoria"
+    delete from categorias where id = p_id;
 end $$;
 
 
--- Permissões (RLS)
--- Com a chave pública dá pra ler tudo e inserir movimentações.
--- Cadastrar, editar e excluir só pelas funções com PIN.
+-- permissões
 alter table categorias    enable row level security;
 alter table produtos      enable row level security;
 alter table movimentacoes enable row level security;
