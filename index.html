@@ -215,34 +215,54 @@
 <!-- RELATÓRIO -->
 <section id="tela-relatorio" class="tela">
     <div class="cabecalho">
-        <h1>Relatório</h1>
-    </div>
-    <h2>Curva ABC
-        <select id="abc-dias" class="pequeno">
-            <option value="30">30 dias</option>
-            <option value="60">60 dias</option>
-            <option value="90">90 dias</option>
-        </select>
-        <button type="button" class="btn pequeno cinza nao-imprime" onclick="window.print()">Imprimir</button>
-    </h2>
-    <p class="info" id="abc-resumo"></p>
-    <div class="grade">
-        <table>
-            <thead>
-                <tr><th>Classe</th><th>Produto</th><th class="dir">Vendido</th><th class="dir">Valor</th><th class="dir some-cel">% acum.</th></tr>
-            </thead>
-            <tbody id="tab-abc"></tbody>
-        </table>
-        <div class="paginacao nao-imprime" id="pag-abc"></div>
+        <div>
+            <h1>Giro dos produtos</h1>
+            <p class="sub" id="abc-periodo"></p>
+        </div>
+        <div class="nao-imprime">
+            <select id="abc-dias" class="pequeno">
+                <option value="30">Últimos 30 dias</option>
+                <option value="60">Últimos 60 dias</option>
+                <option value="90">Últimos 90 dias</option>
+            </select>
+            <button type="button" class="btn cinza" onclick="window.print()">Imprimir</button>
+        </div>
     </div>
 
-    <h2>Produtos parados</h2>
+    <div class="resumo">
+        <div><small>Vendido no período</small><b id="g-total">-</b></div>
+        <div><small>A - mais vendidos</small><b id="g-a">-</b></div>
+        <div><small>B - intermediários</small><b id="g-b">-</b></div>
+        <div><small>C - pouca saída</small><b id="g-c">-</b></div>
+        <div class="alerta"><small>Parados (sem saída)</small><b id="g-parados">-</b></div>
+    </div>
+
     <div class="grade">
+        <div class="grade-topo nao-imprime">
+            <div class="abas" id="giro-abas">
+                <button type="button" data-filtro="todos" class="ativo">Todos</button>
+                <button type="button" data-filtro="A">A</button>
+                <button type="button" data-filtro="B">B</button>
+                <button type="button" data-filtro="C">C</button>
+                <button type="button" data-filtro="parado">Parados</button>
+            </div>
+            <input type="search" id="giro-busca" placeholder="Pesquisar produto">
+        </div>
         <table>
-            <thead><tr><th>Produto</th><th class="dir">Saldo</th><th class="dir">Valor parado</th><th class="dir">Última saída</th></tr></thead>
-            <tbody id="tab-parados"></tbody>
+            <thead>
+                <tr>
+                    <th>Classe</th>
+                    <th>Produto</th>
+                    <th class="dir some-cel">Qtd vendida</th>
+                    <th class="dir">Valor vendido</th>
+                    <th class="some-cel">Participação</th>
+                    <th class="dir">Saldo</th>
+                    <th class="dir some-cel">Última saída</th>
+                </tr>
+            </thead>
+            <tbody id="tab-giro"></tbody>
         </table>
-        <div class="paginacao nao-imprime" id="pag-parados"></div>
+        <div class="paginacao nao-imprime" id="pag-giro"></div>
     </div>
 </section>
 

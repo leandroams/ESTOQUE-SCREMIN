@@ -175,6 +175,16 @@ td.forte { font-weight: 600; }
 .etiqueta.ok { background: #e6f4ea; color: #1a7a35; }
 .etiqueta.baixo { background: #fff4e0; color: #a35a00; }
 .etiqueta.zerado { background: #fdeaea; color: #b30000; }
+.etiqueta.classe-A { background: #e6f4ea; color: #1a7a35; min-width: 24px; text-align: center; }
+.etiqueta.classe-B { background: #e8f0fd; color: #1c57b8; min-width: 24px; text-align: center; }
+.etiqueta.classe-C { background: #eef0f2; color: #555; min-width: 24px; text-align: center; }
+.etiqueta.parado { background: #fdeaea; color: #b30000; }
+
+.resumo b small { font-size: 12px; font-weight: 400; color: #888; display: block; }
+.barra-pct { display: inline-block; width: 70px; height: 6px; background: #eef0f2; border-radius: 3px; margin-right: 8px; vertical-align: middle; overflow: hidden; }
+.barra-pct i { display: block; height: 100%; background: #dc3545; }
+.cabecalho .nao-imprime { display: flex; gap: 6px; align-items: center; }
+.cabecalho .nao-imprime select { width: auto; padding: 8px 10px; font-size: 14px; }
 
 td.acoes { white-space: nowrap; }
 td.acoes .btn { width: 28px; padding: 3px 0; font-size: 15px; line-height: 1; border-radius: 0; border: 1px solid #ddd; background: #fff; color: #555; }
@@ -208,7 +218,6 @@ tr.zerado td:first-child { color: #b30000; font-weight: 600; }
 
 .entrada-txt { color: #28a745; font-weight: 600; }
 .saida-txt { color: #dc3545; font-weight: 600; }
-.classe { font-weight: 700; }
 
 
 /* ===== Formulários ===== */

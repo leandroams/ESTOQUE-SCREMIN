@@ -378,37 +378,63 @@ async function excluirCategoria(id) {
 
 // ---------- relatório ----------
 
+let filtroGiro = 'todos';
+
+const quandoSaiu = dias => dias === null ? 'nunca' : dias === 0 ? 'hoje' : dias === 1 ? 'ontem' : `há ${dias} dias`;
+
 function mostrarRelatorio() {
     const dias = Number($('abc-dias').value);
     const { linhas, total } = Estoque.curvaABC(produtos, movimentacoes, dias);
-    const parados = linhas.filter(l => l.parado).sort((a, b) => b.capitalParado - a.capitalParado);
+    const inicio = new Date(Date.now() - dias * 86400000);
+    $('abc-periodo').textContent = `De ${inicio.toLocaleDateString('pt-BR')} até hoje`;
+
+    // resumo: quantos produtos e quanto do valor vendido cada classe tem
+    const resumoClasse = c => {
+        const da = linhas.filter(l => l.classe === c && !l.parado);
+        const valor = da.reduce((t, l) => t + l.valorVendido, 0);
+        const pct = total > 0 ? Math.round(valor / total * 100) : 0;
+        return `${da.length} produtos <small>${pct}% do valor</small>`;
+    };
+    const parados = linhas.filter(l => l.parado);
     const valorParado = parados.reduce((t, l) => t + Math.max(0, l.capitalParado), 0);
-    const contar = c => linhas.filter(l => l.classe === c).length;
+    $('g-total').textContent = dinheiro(total);
+    $('g-a').innerHTML = resumoClasse('A');
+    $('g-b').innerHTML = resumoClasse('B');
+    $('g-c').innerHTML = resumoClasse('C');
+    $('g-parados').innerHTML = `${parados.length} produtos <small>${dinheiro(valorParado)} em estoque</small>`;
 
-    $('abc-resumo').textContent = `Vendido no período: ${dinheiro(total)}  |  `
-        + `A: ${contar('A')}  B: ${contar('B')}  C: ${contar('C')}  |  `
-        + `${parados.length} parado(s), ${dinheiro(valorParado)} em estoque`;
+    const termo = $('giro-busca').value.trim().toLowerCase();
+    const lista = linhas.filter(l => {
+        if (!l.nome.toLowerCase().includes(termo)) return false;
+        if (filtroGiro === 'parado') return l.parado;
+        if (filtroGiro !== 'todos') return l.classe === filtroGiro && !l.parado;
+        return true;
+    });
 
-    const paginaAbc = paginar('abc', linhas, mostrarRelatorio);
-    $('tab-abc').innerHTML = paginaAbc.length
-        ? paginaAbc.map(l => `<tr>
-            <td class="classe">${l.classe}</td>
+    const maior = Math.max(...linhas.map(l => l.percentual), 0.0001);
+    const pagina = paginar('giro', lista, mostrarRelatorio);
+    $('tab-giro').innerHTML = pagina.length
+        ? pagina.map(l => `<tr>
+            <td>${l.parado
+                ? '<span class="etiqueta parado">Parado</span>'
+                : `<span class="etiqueta classe-${l.classe}">${l.classe}</span>`}</td>
             <td>${esc(l.nome)}</td>
-            <td class="dir">${l.qtdVendida}</td>
+            <td class="dir some-cel">${l.qtdVendida}</td>
             <td class="dir">${dinheiro(l.valorVendido)}</td>
-            <td class="dir some-cel">${(l.percentualAcumulado * 100).toFixed(1)}%</td>
-        </tr>`).join('')
-        : '<tr><td colspan="5" class="vazio">Sem produtos cadastrados.</td></tr>';
-
-    const paginaParados = paginar('parados', parados, mostrarRelatorio);
-    $('tab-parados').innerHTML = paginaParados.length
-        ? paginaParados.map(l => `<tr>
-            <td>${esc(l.nome)}</td>
+            <td class="some-cel"><span class="barra-pct"><i style="width:${l.percentual / maior * 100}%"></i></span>${(l.percentual * 100).toFixed(1)}%</td>
             <td class="dir">${l.saldo}</td>
-            <td class="dir">${dinheiro(Math.max(0, l.capitalParado))}</td>
-            <td class="dir">${l.diasSemSaida === null ? 'nunca' : `${l.diasSemSaida} dias`}</td>
+            <td class="dir some-cel">${quandoSaiu(l.diasSemSaida)}</td>
         </tr>`).join('')
-        : '<tr><td colspan="4" class="vazio">Todos os produtos tiveram saída no período.</td></tr>';
+        : '<tr><td colspan="7" class="vazio">Nenhum produto.</td></tr>';
+}
+
+function filtrarGiro(ev) {
+    const botao = ev.target.closest('button');
+    if (!botao) return;
+    filtroGiro = botao.dataset.filtro;
+    primeiraPagina('giro');
+    document.querySelectorAll('#giro-abas button').forEach(b => b.classList.toggle('ativo', b === botao));
+    mostrarRelatorio();
 }
 
 
@@ -458,18 +484,21 @@ $('prod-busca').addEventListener('input', () => { primeiraPagina('produtos'); mo
 $('prod-filtro').addEventListener('change', () => { primeiraPagina('produtos'); mostrarProdutos(); });
 $('form-categoria').addEventListener('submit', salvarCategoria);
 
-$('abc-dias').addEventListener('change', () => { primeiraPagina('abc'); primeiraPagina('parados'); mostrarRelatorio(); });
+$('abc-dias').addEventListener('change', () => { primeiraPagina('giro'); mostrarRelatorio(); });
+$('giro-abas').addEventListener('click', filtrarGiro);
+$('giro-busca').addEventListener('input', () => { primeiraPagina('giro'); mostrarRelatorio(); });
 $('pos-abas').addEventListener('click', filtrarPainel);
 $('pos-busca').addEventListener('input', () => { primeiraPagina('posicao'); mostrarPainel(); });
 
 // na impressão do relatório sai a lista inteira, não só a página aberta
-let tamanhosAntes = {};
+let tamanhoAntes;
 window.addEventListener('beforeprint', () => {
-    ['abc', 'parados'].forEach(n => { tamanhosAntes[n] = paginas[n].tamanho; paginas[n].tamanho = 0; });
+    tamanhoAntes = paginas.giro.tamanho;
+    paginas.giro.tamanho = 0;
     mostrarRelatorio();
 });
 window.addEventListener('afterprint', () => {
-    ['abc', 'parados'].forEach(n => { paginas[n].tamanho = tamanhosAntes[n]; });
+    paginas.giro.tamanho = tamanhoAntes;
     mostrarRelatorio();
 });
 
