@@ -55,9 +55,10 @@ const Banco = {
         return data === true;
     },
 
-    async salvarProduto(pin, p) {
+    // devolve o id do produto
+    async salvarProduto(p) {
         const args = {
-            p_pin: pin,
+            p_pin: null,
             p_id: p.id || null,
             p_nome: p.nome,
             p_categoria_id: p.categoria_id || null,
@@ -67,8 +68,9 @@ const Banco = {
         };
         // só manda o código se tiver, assim funciona antes de rodar supabase/codigo_barras.sql
         if (p.codigo_barras) args.p_codigo_barras = p.codigo_barras;
-        const { error } = await sb.rpc('salvar_produto', args);
+        const { data, error } = await sb.rpc('salvar_produto', args);
         checarErro(error);
+        return data;
     },
 
     async excluirProduto(pin, id) {

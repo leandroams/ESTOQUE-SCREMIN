@@ -6,7 +6,7 @@ Conferência do que está no planejamento (Projeto 10) com o que foi feito.
 
 | Requisito do planejamento | Onde está |
 |---|---|
-| Cadastrar, editar e consultar produtos com custo, preço de venda e estoque mínimo | tela Produtos, função `salvar_produto` no banco |
+| Cadastrar, editar e consultar produtos com custo, preço de venda e estoque mínimo | tela Produtos, função `salvar_produto` no banco; no cadastro dá para informar o estoque inicial, que entra como uma entrada |
 | Cadastro de categorias | tela Produtos (Categorias), função `salvar_categoria` |
 | Registrar entradas e saídas | tela Lançar e botões + / - do Painel, tabela `movimentacoes` |
 | Saldo calculado, nunca digitado | view `vw_saldos` (soma entradas e tira saídas); a tela só lê |
@@ -15,7 +15,7 @@ Conferência do que está no planejamento (Projeto 10) com o que foi feito.
 | Guardar a data de cada movimentação | coluna `criado_em`, preenchida pelo servidor |
 | Avisar produto abaixo do mínimo | Painel (resumo, aba Estoque baixo / Zerados, etiqueta de situação) e aviso ao lançar saída |
 | Curva ABC com produtos parados | tela Relatório (30, 60 ou 90 dias), com impressão |
-| PIN em ações sensíveis (cadastrar, excluir) | janela do PIN; o PIN é conferido no banco, não fica no código |
+| PIN em ações sensíveis (cadastrar, excluir) | janela do PIN para excluir produto e para categorias; o PIN é conferido no banco. O cadastro de produto ficou sem PIN a pedido da distribuidora |
 
 ## Não funcionais
 

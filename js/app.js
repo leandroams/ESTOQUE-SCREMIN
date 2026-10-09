@@ -143,7 +143,7 @@ async function lerCodigo(ev) {
 
     $('leitor-ultimo').textContent = '';
     const p = produtos.find(x => x.codigo_barras === cod);
-    if (!p) return avisar(`Código ${cod} não cadastrado.`, 'erro');
+    if (!p) return cadastrarCodigo(cod);
 
     const tipo = document.querySelector('input[name=leitor-tipo]:checked').value;
     const qtd = Number($('leitor-qtd').value);
@@ -161,6 +161,15 @@ async function lerCodigo(ev) {
         avisar(e.message, 'erro');
     }
     campo.focus();
+}
+
+// código que ainda não existe: abre o cadastro com o código preenchido
+function cadastrarCodigo(cod) {
+    avisar(`Código ${cod} não cadastrado. Preencha o produto.`, 'erro');
+    location.hash = 'produtos';
+    abrirTela();
+    abrirFormProduto(null);
+    $('p-codigo').value = cod;
 }
 
 // botões de entrada/saída do painel: abre o lançamento já preenchido
@@ -190,6 +199,14 @@ function trocouTipo() {
 
 function mostrarListaLancar() {
     const termo = $('mov-busca').value.trim().toLowerCase();
+    // se for um código de barras cadastrado, já seleciona o produto
+    const pelCodigo = produtos.find(p => p.codigo_barras && p.codigo_barras === termo);
+    if (pelCodigo) {
+        $('mov-produto').innerHTML = `<option value="${pelCodigo.id}">${esc(pelCodigo.nome)} (${saldoDe(pelCodigo.id)})</option>`;
+        $('mov-produto').value = pelCodigo.id;
+        mostrarSaldoSelecionado();
+        return;
+    }
     const anterior = Number($('mov-produto').value);
     $('mov-produto').innerHTML = produtos
         .filter(p => p.nome.toLowerCase().includes(termo))
@@ -271,7 +288,7 @@ function mostrarProdutos() {
 
     const termo = $('prod-busca').value.trim().toLowerCase();
     const lista = produtos.filter(p => {
-        if (!p.nome.toLowerCase().includes(termo)) return false;
+        if (!p.nome.toLowerCase().includes(termo) && (p.codigo_barras || '') !== termo) return false;
         const f = $('prod-filtro').value;
         if (f === 'repor') return Estoque.situacaoEstoque(saldoDe(p.id), p.estoque_minimo) !== 'ok';
         if (f !== 'todos') return String(p.categoria_id) === f;
@@ -308,7 +325,9 @@ function abrirFormProduto(p) {
     $('p-custo').value = p ? p.custo : '';
     $('p-venda').value = p ? p.preco_venda : '';
     $('p-minimo').value = p ? p.estoque_minimo : '';
-    $('p-pin').value = '';
+    // estoque inicial só no cadastro; depois o saldo muda só por entrada e saída
+    $('p-inicial').value = 0;
+    $('p-inicial-campo').classList.toggle('escondido', !!p);
     $('form-produto').classList.remove('escondido');
     $('p-nome').focus();
 }
@@ -338,8 +357,13 @@ async function salvarProduto(ev) {
     const outro = dados.codigo_barras && produtos.find(p => p.id !== id && p.codigo_barras === dados.codigo_barras);
     if (outro) return avisar(`Esse código já é do produto ${outro.nome}.`, 'erro');
 
+    const inicial = id ? 0 : Number($('p-inicial').value) || 0;
+    if (!Number.isInteger(inicial) || inicial < 0) return avisar('Estoque inicial inválido.', 'erro');
+
     try {
-        await Banco.salvarProduto($('p-pin').value, dados);
+        const novoId = await Banco.salvarProduto(dados);
+        // o estoque inicial entra como uma entrada, assim o saldo continua calculado
+        if (inicial > 0) await Banco.registrarMovimentacao(novoId, 'entrada', inicial, 'Estoque inicial');
         fecharFormProduto();
         avisar(id ? 'Produto alterado.' : 'Produto cadastrado.', 'ok');
         await carregar();
@@ -507,6 +531,10 @@ function pedirPin(texto) {
 $('form-mov').addEventListener('submit', salvarMovimentacao);
 document.querySelectorAll('input[name=tipo]').forEach(r => r.addEventListener('change', trocouTipo));
 $('mov-busca').addEventListener('input', mostrarListaLancar);
+// depois de bipar no Lançar, o Enter do leitor vai para a quantidade
+$('mov-busca').addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); $('mov-qtd').select(); }
+});
 $('mov-produto').addEventListener('change', mostrarSaldoSelecionado);
 $('hist-dias').addEventListener('change', () => { primeiraPagina('historico'); mostrarHistorico(); });
 

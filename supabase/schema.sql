@@ -100,7 +100,6 @@ declare
     novo_id bigint;
     codigo text := nullif(trim(p_codigo_barras), '');
 begin
-    if not pin_valido(p_pin) then raise exception 'PIN incorreto'; end if;
     if p_id is null then
         insert into produtos (nome, categoria_id, custo, preco_venda, estoque_minimo, codigo_barras)
         values (trim(p_nome), p_categoria_id, p_custo, p_preco_venda, p_estoque_minimo, codigo)
