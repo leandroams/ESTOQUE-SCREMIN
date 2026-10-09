@@ -27,7 +27,7 @@ Conferência do que está no planejamento (Projeto 10) com o que foi feito.
 | Mensagem clara ao salvar (Nielsen) | aviso verde de confirmação, vermelho em erro |
 | Confirmação antes de excluir (Nielsen) | janela pedindo o PIN com o nome do item |
 | Mesmos botões e cores em todas as telas (Nielsen) | um arquivo de estilo só (`css/sistema.css`) |
-| Lançar saída com poucos passos | botão - na linha do produto já abre o lançamento preenchido |
+| Lançar saída com poucos passos | botão - na linha do produto já abre o lançamento preenchido; leitor de código de barras no painel lança direto |
 | Código comentado e organizado em pastas | ver README |
 | Git e GitHub, novos recursos em branch | repositório `estoque-scremin`, mudanças por pull request |
 | Testes | `npm test` (regras de saldo, validação, situação e curva ABC) |

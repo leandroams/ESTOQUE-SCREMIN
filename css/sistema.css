@@ -12,7 +12,7 @@ body {
 
 button { cursor: pointer; }
 
-.centro, main { max-width: 960px; margin: 0 auto; }
+.centro, main { max-width: 1200px; margin: 0 auto; }
 
 
 /* ===== Cabeçalho ===== */
@@ -193,6 +193,19 @@ td.acoes .btn:hover { transform: none; background: #f0f2f5; }
 .cabecalho > div .btn + .btn { margin-left: 6px; }
 
 
+/* painel em duas colunas: grade à esquerda, leitor e últimos lançamentos à direita */
+.painel-corpo { display: grid; grid-template-columns: 1fr 300px; gap: 15px; align-items: start; }
+.painel-corpo aside h2 { margin-top: 0; }
+.leitor { padding: 14px; }
+.leitor h3 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+.leitor .tipo label { padding: 8px; font-size: 14px; }
+.leitor #leitor-codigo { margin-top: 10px; font-size: 17px; letter-spacing: 0.04em; }
+.leitor-qtd { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.leitor-qtd label { margin: 0; }
+.leitor-qtd input { width: 80px; padding: 6px 10px; }
+.leitor .info { font-size: 13px; margin-bottom: 0; }
+
+
 /* ===== Tabelas ===== */
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th {
@@ -352,6 +365,10 @@ dialog .botoes .btn { flex: 1; }
 #aviso.ok { background: #28a745; }
 #aviso.erro { background: #dc3545; }
 
+
+@media (max-width: 900px) {
+    .painel-corpo { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 760px) {
     .resumo { grid-template-columns: repeat(2, 1fr); }

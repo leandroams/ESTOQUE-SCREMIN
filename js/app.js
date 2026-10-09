@@ -84,7 +84,8 @@ function mostrarPainel() {
     const termo = $('pos-busca').value.trim().toLowerCase();
     const lista = linhas.filter(p =>
         (filtroPainel === 'todos' || p.situacao === filtroPainel) &&
-        (p.nome.toLowerCase().includes(termo) || codigo(p.id).includes(termo)));
+        (p.nome.toLowerCase().includes(termo) || codigo(p.id).includes(termo) ||
+         (p.codigo_barras || '').includes(termo)));
 
     const nomeSituacao = { ok: 'Normal', baixo: 'Baixo', zerado: 'Zerado' };
     const pagina = paginar('posicao', lista, mostrarPainel);
@@ -110,19 +111,17 @@ function mostrarPainel() {
         corrente[m.produto_id] = (corrente[m.produto_id] || 0) + (m.tipo === 'entrada' ? m.quantidade : -m.quantidade);
         return { ...m, saldoApos: corrente[m.produto_id] };
     });
-    const ultimas = depois.slice(-8).reverse();
+    const ultimas = depois.slice(-10).reverse();
     $('tab-ultimas').innerHTML = ultimas.length
         ? ultimas.map(m => {
             const p = produtoPorId(m.produto_id);
             return `<tr>
-                <td>${dataCurta(m.criado_em)}</td>
-                <td class="${m.tipo}-txt">${m.tipo === 'entrada' ? 'Entrada' : 'Saída'}</td>
-                <td>${p ? esc(p.nome) : '(excluído)'}</td>
-                <td class="dir">${m.tipo === 'entrada' ? '+' : '-'}${m.quantidade}</td>
+                <td>${p ? esc(p.nome) : '(excluído)'}<span class="obs">${dataCurta(m.criado_em)}</span></td>
+                <td class="dir ${m.tipo}-txt">${m.tipo === 'entrada' ? '+' : '-'}${m.quantidade}</td>
                 <td class="dir">${m.saldoApos}</td>
             </tr>`;
         }).join('')
-        : '<tr><td colspan="5" class="vazio">Nada lançado ainda.</td></tr>';
+        : '<tr><td colspan="3" class="vazio">Nada lançado ainda.</td></tr>';
 }
 
 function filtrarPainel(ev) {
@@ -132,6 +131,36 @@ function filtrarPainel(ev) {
     primeiraPagina('posicao');
     document.querySelectorAll('#pos-abas button').forEach(b => b.classList.toggle('ativo', b === botao));
     mostrarPainel();
+}
+
+// leitor de código de barras: o leitor USB digita o código e aperta Enter
+async function lerCodigo(ev) {
+    ev.preventDefault();
+    const campo = $('leitor-codigo');
+    const cod = campo.value.trim();
+    campo.value = '';
+    if (!cod) return;
+
+    $('leitor-ultimo').textContent = '';
+    const p = produtos.find(x => x.codigo_barras === cod);
+    if (!p) return avisar(`Código ${cod} não cadastrado.`, 'erro');
+
+    const tipo = document.querySelector('input[name=leitor-tipo]:checked').value;
+    const qtd = Number($('leitor-qtd').value);
+    const erro = Estoque.validarMovimentacao(tipo, qtd, saldoDe(p.id));
+    if (erro) return avisar(`${p.nome}: ${erro}`, 'erro');
+
+    try {
+        await Banco.registrarMovimentacao(p.id, tipo, qtd, 'Leitor');
+        const novo = saldoDe(p.id) + (tipo === 'entrada' ? qtd : -qtd);
+        $('leitor-ultimo').textContent = `${tipo === 'entrada' ? 'Entrada' : 'Saída'} de ${qtd} ${p.nome}. Saldo: ${novo}`;
+        avisar(`${p.nome}: saldo ${novo}.`, 'ok');
+        $('leitor-qtd').value = 1;
+        await carregar();
+    } catch (e) {
+        avisar(e.message, 'erro');
+    }
+    campo.focus();
 }
 
 // botões de entrada/saída do painel: abre o lançamento já preenchido
@@ -274,6 +303,7 @@ function abrirFormProduto(p) {
         + categorias.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
     $('p-id').value = p ? p.id : '';
     $('p-nome').value = p ? p.nome : '';
+    $('p-codigo').value = p && p.codigo_barras ? p.codigo_barras : '';
     $('p-categoria').value = p && p.categoria_id ? p.categoria_id : '';
     $('p-custo').value = p ? p.custo : '';
     $('p-venda').value = p ? p.preco_venda : '';
@@ -297,6 +327,7 @@ async function salvarProduto(ev) {
     const dados = {
         id,
         nome: $('p-nome').value.trim(),
+        codigo_barras: $('p-codigo').value.trim(),
         categoria_id: Number($('p-categoria').value) || null,
         custo: Number($('p-custo').value),
         preco_venda: Number($('p-venda').value),
@@ -304,6 +335,8 @@ async function salvarProduto(ev) {
     };
     const repetido = produtos.some(p => p.id !== id && p.nome.toLowerCase() === dados.nome.toLowerCase());
     if (repetido) return avisar('Já existe um produto com esse nome.', 'erro');
+    const outro = dados.codigo_barras && produtos.find(p => p.id !== id && p.codigo_barras === dados.codigo_barras);
+    if (outro) return avisar(`Esse código já é do produto ${outro.nome}.`, 'erro');
 
     try {
         await Banco.salvarProduto($('p-pin').value, dados);
@@ -488,6 +521,12 @@ $('abc-dias').addEventListener('change', () => { primeiraPagina('giro'); mostrar
 $('giro-abas').addEventListener('click', filtrarGiro);
 $('giro-busca').addEventListener('input', () => { primeiraPagina('giro'); mostrarRelatorio(); });
 $('pos-abas').addEventListener('click', filtrarPainel);
+$('form-leitor').addEventListener('submit', ev => ev.preventDefault());
+$('leitor-codigo').addEventListener('keydown', ev => { if (ev.key === 'Enter') lerCodigo(ev); });
+// o leitor manda Enter depois do código: no cadastro só passa para o próximo campo
+$('p-codigo').addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); $('p-custo').focus(); }
+});
 $('pos-busca').addEventListener('input', () => { primeiraPagina('posicao'); mostrarPainel(); });
 
 // na impressão do relatório sai a lista inteira, não só a página aberta

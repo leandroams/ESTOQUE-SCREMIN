@@ -51,44 +51,60 @@
         <div><small>Movimentado hoje</small><b id="r-hoje">-</b></div>
     </div>
 
-    <div class="grade">
-        <div class="grade-topo">
-            <div class="abas" id="pos-abas">
-                <button type="button" data-filtro="todos" class="ativo">Todos <span id="c-todos"></span></button>
-                <button type="button" data-filtro="baixo">Estoque baixo <span id="c-baixo"></span></button>
-                <button type="button" data-filtro="zerado">Zerados <span id="c-zerado"></span></button>
+    <div class="painel-corpo">
+        <div class="grade">
+            <div class="grade-topo">
+                <div class="abas" id="pos-abas">
+                    <button type="button" data-filtro="todos" class="ativo">Todos <span id="c-todos"></span></button>
+                    <button type="button" data-filtro="baixo">Estoque baixo <span id="c-baixo"></span></button>
+                    <button type="button" data-filtro="zerado">Zerados <span id="c-zerado"></span></button>
+                </div>
+                <input type="search" id="pos-busca" placeholder="Pesquisar por nome ou código">
             </div>
-            <input type="search" id="pos-busca" placeholder="Pesquisar por nome ou código">
+            <div class="grade-tabela">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Cód.</th>
+                            <th>Descrição</th>
+                            <th class="some-cel">Categoria</th>
+                            <th class="dir">Saldo</th>
+                            <th class="dir some-cel">Mín.</th>
+                            <th>Situação</th>
+                            <th class="dir some-cel">Valor</th>
+                            <th class="dir some-cel">Última mov.</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tab-posicao"></tbody>
+                </table>
+            </div>
+            <div class="paginacao" id="pag-posicao"></div>
         </div>
-        <div class="grade-tabela">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Cód.</th>
-                        <th>Descrição</th>
-                        <th class="some-cel">Categoria</th>
-                        <th class="dir">Saldo</th>
-                        <th class="dir some-cel">Mín.</th>
-                        <th>Situação</th>
-                        <th class="dir some-cel">Valor</th>
-                        <th class="dir some-cel">Última mov.</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="tab-posicao"></tbody>
-            </table>
-        </div>
-        <div class="paginacao" id="pag-posicao"></div>
-    </div>
 
-    <h2>Últimos lançamentos</h2>
-    <div class="grade">
-        <div class="grade-tabela">
-            <table>
-                <thead><tr><th>Data</th><th>Tipo</th><th>Produto</th><th class="dir">Qtd</th><th class="dir">Saldo após</th></tr></thead>
-                <tbody id="tab-ultimas"></tbody>
-            </table>
-        </div>
+        <aside>
+            <form id="form-leitor" class="grade leitor">
+                <h3>Leitor</h3>
+                <div class="tipo">
+                    <label><input type="radio" name="leitor-tipo" value="saida" checked> Saída</label>
+                    <label><input type="radio" name="leitor-tipo" value="entrada"> Entrada</label>
+                </div>
+                <input type="text" id="leitor-codigo" placeholder="Código de barras" autocomplete="off">
+                <div class="leitor-qtd">
+                    <label for="leitor-qtd">Quantidade</label>
+                    <input type="number" id="leitor-qtd" min="1" step="1" value="1">
+                </div>
+                <p id="leitor-ultimo" class="info"></p>
+            </form>
+
+            <h2>Últimos lançamentos</h2>
+            <div class="grade">
+                <table>
+                    <thead><tr><th>Produto</th><th class="dir">Qtd</th><th class="dir">Saldo</th></tr></thead>
+                    <tbody id="tab-ultimas"></tbody>
+                </table>
+            </div>
+        </aside>
     </div>
 </section>
 
@@ -153,6 +169,10 @@
             <div>
                 <label for="p-categoria">Categoria</label>
                 <select id="p-categoria"></select>
+            </div>
+            <div>
+                <label for="p-codigo">Código de barras</label>
+                <input type="text" id="p-codigo" maxlength="40" autocomplete="off">
             </div>
         </div>
         <div class="linha">
