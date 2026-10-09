@@ -1,0 +1,458 @@
+// Telas do sistema. Depois de qualquer alteração chama carregar() de novo,
+// assim todas as telas mostram o mesmo saldo.
+
+let categorias = [];
+let produtos = [];
+let movimentacoes = [];
+let saldos = {};
+
+const $ = id => document.getElementById(id);
+
+const saldoDe = id => (saldos[id] ? saldos[id].saldo : 0);
+const produtoPorId = id => produtos.find(p => p.id === id);
+const nomeCategoria = id => (categorias.find(c => c.id === id) || {}).nome || '-';
+
+async function carregar() {
+    try {
+        [categorias, produtos, movimentacoes] = await Promise.all([
+            Banco.listarCategorias(),
+            Banco.listarProdutos(),
+            Banco.listarMovimentacoes()
+        ]);
+        saldos = Estoque.calcularSaldos(movimentacoes);
+        mostrarPainel();
+        mostrarListaLancar();
+        mostrarHistorico();
+        mostrarProdutos();
+        mostrarCategorias();
+        mostrarRelatorio();
+    } catch (e) {
+        console.error(e);
+        avisar('Erro ao carregar os dados: ' + e.message, 'erro');
+    }
+}
+
+
+// ---------- navegação ----------
+
+function abrirTela() {
+    let tela = location.hash.slice(1);
+    if (!$('tela-' + tela)) tela = 'painel';
+    document.querySelectorAll('.tela').forEach(s => s.classList.toggle('ativa', s.id === 'tela-' + tela));
+    document.querySelectorAll('#menu a').forEach(a => a.classList.toggle('ativo', a.dataset.tela === tela));
+}
+window.addEventListener('hashchange', abrirTela);
+
+
+// ---------- painel ----------
+
+let filtroPainel = 'todos';
+
+const codigo = id => String(id).padStart(4, '0');
+
+function mostrarPainel() {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    $('hoje').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    // ultima movimentação de cada produto
+    const ultimaMov = {};
+    movimentacoes.forEach(m => { ultimaMov[m.produto_id] = m.criado_em; });
+
+    const linhas = produtos.map(p => {
+        const saldo = saldoDe(p.id);
+        return { ...p, saldo, situacao: Estoque.situacaoEstoque(saldo, p.estoque_minimo), valor: saldo * Number(p.custo) };
+    });
+
+    const baixos = linhas.filter(p => p.situacao === 'baixo').length;
+    const zerados = linhas.filter(p => p.situacao === 'zerado').length;
+    const movHoje = movimentacoes.filter(m => new Date(m.criado_em) >= hoje);
+
+    $('r-itens').textContent = produtos.length;
+    $('r-unidades').textContent = linhas.reduce((t, p) => t + Math.max(p.saldo, 0), 0);
+    $('r-valor').textContent = dinheiro(linhas.reduce((t, p) => t + Math.max(p.valor, 0), 0));
+    $('r-repor').textContent = baixos + zerados;
+    $('r-hoje').textContent = movHoje.length + (movHoje.length === 1 ? ' lançamento' : ' lançamentos');
+    $('c-todos').textContent = linhas.length;
+    $('c-baixo').textContent = baixos;
+    $('c-zerado').textContent = zerados;
+
+    const termo = $('pos-busca').value.trim().toLowerCase();
+    const lista = linhas.filter(p =>
+        (filtroPainel === 'todos' || p.situacao === filtroPainel) &&
+        (p.nome.toLowerCase().includes(termo) || codigo(p.id).includes(termo)));
+
+    const nomeSituacao = { ok: 'Normal', baixo: 'Baixo', zerado: 'Zerado' };
+    $('tab-posicao').innerHTML = lista.length
+        ? lista.map(p => `<tr>
+            <td class="cod">${codigo(p.id)}</td>
+            <td>${esc(p.nome)}</td>
+            <td class="some-cel">${esc(nomeCategoria(p.categoria_id))}</td>
+            <td class="dir forte">${p.saldo}</td>
+            <td class="dir some-cel">${p.estoque_minimo}</td>
+            <td><span class="etiqueta ${p.situacao}">${nomeSituacao[p.situacao]}</span></td>
+            <td class="dir some-cel">${dinheiro(p.valor)}</td>
+            <td class="dir some-cel">${ultimaMov[p.id] ? dataCurta(ultimaMov[p.id]) : '-'}</td>
+            <td class="dir acoes">
+                <button class="btn" title="Entrada" onclick="lancarDireto('entrada', ${p.id})">+</button><button class="btn" title="Saída" onclick="lancarDireto('saida', ${p.id})">-</button>
+            </td>
+          </tr>`).join('')
+        : '<tr><td colspan="9" class="vazio">Nenhum produto encontrado.</td></tr>';
+    $('pos-rodape').textContent = `${lista.length} de ${linhas.length} produtos`;
+
+    // saldo depois de cada lançamento, pra conferir
+    const corrente = {};
+    const depois = movimentacoes.map(m => {
+        corrente[m.produto_id] = (corrente[m.produto_id] || 0) + (m.tipo === 'entrada' ? m.quantidade : -m.quantidade);
+        return { ...m, saldoApos: corrente[m.produto_id] };
+    });
+    const ultimas = depois.slice(-8).reverse();
+    $('tab-ultimas').innerHTML = ultimas.length
+        ? ultimas.map(m => {
+            const p = produtoPorId(m.produto_id);
+            return `<tr>
+                <td>${dataCurta(m.criado_em)}</td>
+                <td class="${m.tipo}-txt">${m.tipo === 'entrada' ? 'Entrada' : 'Saída'}</td>
+                <td>${p ? esc(p.nome) : '(excluído)'}</td>
+                <td class="dir">${m.tipo === 'entrada' ? '+' : '-'}${m.quantidade}</td>
+                <td class="dir">${m.saldoApos}</td>
+            </tr>`;
+        }).join('')
+        : '<tr><td colspan="5" class="vazio">Nada lançado ainda.</td></tr>';
+}
+
+function filtrarPainel(ev) {
+    const botao = ev.target.closest('button');
+    if (!botao) return;
+    filtroPainel = botao.dataset.filtro;
+    document.querySelectorAll('#pos-abas button').forEach(b => b.classList.toggle('ativo', b === botao));
+    mostrarPainel();
+}
+
+// botões de entrada/saída do painel: abre o lançamento já preenchido
+function lancarDireto(tipo, id) {
+    document.querySelector(`input[name=tipo][value=${tipo}]`).checked = true;
+    trocouTipo();
+    $('mov-busca').value = '';
+    mostrarListaLancar();
+    if (id) $('mov-produto').value = id;
+    mostrarSaldoSelecionado();
+    location.hash = 'lancar';
+    if (id) $('mov-qtd').select(); else $('mov-busca').focus();
+}
+
+
+// ---------- lançar entrada / saída ----------
+
+function tipoEscolhido() {
+    return document.querySelector('input[name=tipo]:checked').value;
+}
+
+function trocouTipo() {
+    const entrada = tipoEscolhido() === 'entrada';
+    $('mov-salvar').textContent = entrada ? 'Salvar entrada' : 'Salvar saída';
+    $('mov-salvar').className = 'btn ' + (entrada ? 'verde' : 'vermelho');
+}
+
+function mostrarListaLancar() {
+    const termo = $('mov-busca').value.trim().toLowerCase();
+    const anterior = Number($('mov-produto').value);
+    $('mov-produto').innerHTML = produtos
+        .filter(p => p.nome.toLowerCase().includes(termo))
+        .map(p => `<option value="${p.id}">${esc(p.nome)} (${saldoDe(p.id)})</option>`)
+        .join('');
+    if (anterior) $('mov-produto').value = anterior;
+    mostrarSaldoSelecionado();
+}
+
+function mostrarSaldoSelecionado() {
+    const p = produtoPorId(Number($('mov-produto').value));
+    $('mov-saldo').textContent = p ? `Saldo atual: ${saldoDe(p.id)}  |  mínimo: ${p.estoque_minimo}` : '';
+}
+
+async function salvarMovimentacao(ev) {
+    ev.preventDefault();
+    const p = produtoPorId(Number($('mov-produto').value));
+    if (!p) return avisar('Selecione o produto.', 'erro');
+
+    const tipo = tipoEscolhido();
+    const qtd = Number($('mov-qtd').value);
+    const erro = Estoque.validarMovimentacao(tipo, qtd, saldoDe(p.id));
+    if (erro) return avisar(erro, 'erro');
+
+    $('mov-salvar').disabled = true;
+    try {
+        await Banco.registrarMovimentacao(p.id, tipo, qtd, $('mov-obs').value.trim());
+        const novo = saldoDe(p.id) + (tipo === 'entrada' ? qtd : -qtd);
+        if (tipo === 'saida' && Estoque.situacaoEstoque(novo, p.estoque_minimo) !== 'ok') {
+            avisar(`Salvo. ${p.nome} ficou com ${novo}, abaixo do mínimo.`, 'erro');
+        } else {
+            avisar(`Salvo. ${p.nome}: saldo ${novo}.`, 'ok');
+        }
+        $('mov-qtd').value = 1;
+        $('mov-obs').value = '';
+        $('mov-busca').value = '';
+        $('mov-produto').value = '';
+        await carregar();
+        $('mov-busca').focus();
+    } catch (e) {
+        avisar(e.message, 'erro');
+    }
+    $('mov-salvar').disabled = false;
+}
+
+function linhaMov(m) {
+    const p = produtoPorId(m.produto_id);
+    const obs = m.observacao ? `<span class="obs">${esc(m.observacao)}</span>` : '';
+    return `<tr>
+        <td>${p ? esc(p.nome) : '(excluído)'}${obs}</td>
+        <td class="${m.tipo}-txt">${m.tipo === 'entrada' ? 'Entrada' : 'Saída'}</td>
+        <td class="dir">${m.quantidade}</td>
+        <td class="dir">${dataCurta(m.criado_em)}</td>
+    </tr>`;
+}
+
+function mostrarHistorico() {
+    const dias = Number($('hist-dias').value);
+    const inicio = new Date();
+    inicio.setHours(0, 0, 0, 0);
+    inicio.setDate(inicio.getDate() - (dias - 1));
+    const lista = movimentacoes.filter(m => new Date(m.criado_em) >= inicio).reverse();
+    $('tab-historico').innerHTML = lista.length
+        ? lista.map(linhaMov).join('')
+        : '<tr><td colspan="4" class="vazio">Nenhuma movimentação no período.</td></tr>';
+}
+
+
+// ---------- produtos ----------
+
+function mostrarProdutos() {
+    // monta o filtro mantendo a opção escolhida
+    const filtro = $('prod-filtro').value || 'todos';
+    $('prod-filtro').innerHTML = '<option value="todos">Todas as categorias</option>'
+        + '<option value="repor">Abaixo do mínimo</option>'
+        + categorias.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+    $('prod-filtro').value = [...$('prod-filtro').options].some(o => o.value === filtro) ? filtro : 'todos';
+
+    const termo = $('prod-busca').value.trim().toLowerCase();
+    const lista = produtos.filter(p => {
+        if (!p.nome.toLowerCase().includes(termo)) return false;
+        const f = $('prod-filtro').value;
+        if (f === 'repor') return Estoque.situacaoEstoque(saldoDe(p.id), p.estoque_minimo) !== 'ok';
+        if (f !== 'todos') return String(p.categoria_id) === f;
+        return true;
+    });
+
+    $('tab-produtos').innerHTML = lista.length
+        ? lista.map(p => {
+            const saldo = saldoDe(p.id);
+            return `<tr class="${Estoque.situacaoEstoque(saldo, p.estoque_minimo)}">
+                <td>${esc(p.nome)}</td>
+                <td class="some-cel">${esc(nomeCategoria(p.categoria_id))}</td>
+                <td class="dir">${saldo}</td>
+                <td class="dir">${p.estoque_minimo}</td>
+                <td class="dir some-cel">${dinheiro(p.custo)}</td>
+                <td class="dir some-cel">${dinheiro(p.preco_venda)}</td>
+                <td class="dir">
+                    <button class="btn" onclick="editarProduto(${p.id})">Editar</button>
+                    <button class="btn" onclick="excluirProduto(${p.id})">Excluir</button>
+                </td>
+            </tr>`;
+        }).join('')
+        : '<tr><td colspan="7" class="vazio">Nenhum produto.</td></tr>';
+}
+
+function abrirFormProduto(p) {
+    $('p-categoria').innerHTML = '<option value="">Sem categoria</option>'
+        + categorias.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+    $('p-id').value = p ? p.id : '';
+    $('p-nome').value = p ? p.nome : '';
+    $('p-categoria').value = p && p.categoria_id ? p.categoria_id : '';
+    $('p-custo').value = p ? p.custo : '';
+    $('p-venda').value = p ? p.preco_venda : '';
+    $('p-minimo').value = p ? p.estoque_minimo : '';
+    $('p-pin').value = '';
+    $('form-produto').classList.remove('escondido');
+    $('p-nome').focus();
+}
+
+function fecharFormProduto() {
+    $('form-produto').classList.add('escondido');
+}
+
+function editarProduto(id) {
+    abrirFormProduto(produtoPorId(id));
+}
+
+async function salvarProduto(ev) {
+    ev.preventDefault();
+    const id = Number($('p-id').value) || null;
+    const dados = {
+        id,
+        nome: $('p-nome').value.trim(),
+        categoria_id: Number($('p-categoria').value) || null,
+        custo: Number($('p-custo').value),
+        preco_venda: Number($('p-venda').value),
+        estoque_minimo: parseInt($('p-minimo').value, 10)
+    };
+    const repetido = produtos.some(p => p.id !== id && p.nome.toLowerCase() === dados.nome.toLowerCase());
+    if (repetido) return avisar('Já existe um produto com esse nome.', 'erro');
+
+    try {
+        await Banco.salvarProduto($('p-pin').value, dados);
+        fecharFormProduto();
+        avisar(id ? 'Produto alterado.' : 'Produto cadastrado.', 'ok');
+        await carregar();
+    } catch (e) {
+        avisar(e.message, 'erro');
+    }
+}
+
+async function excluirProduto(id) {
+    const p = produtoPorId(id);
+    const pin = await pedirPin(`Excluir ${p.nome}? O histórico de movimentações continua salvo.`);
+    if (pin === null) return;
+    try {
+        await Banco.excluirProduto(pin, id);
+        avisar('Produto excluído.', 'ok');
+        await carregar();
+    } catch (e) {
+        avisar(e.message, 'erro');
+    }
+}
+
+
+// ---------- categorias ----------
+
+function mostrarCategorias() {
+    $('tab-categorias').innerHTML = categorias.length
+        ? categorias.map(c => {
+            const qtd = produtos.filter(p => p.categoria_id === c.id).length;
+            return `<tr>
+                <td>${esc(c.nome)}</td>
+                <td class="dir">${qtd} produto(s)</td>
+                <td class="dir"><button class="btn" onclick="excluirCategoria(${c.id})">Excluir</button></td>
+            </tr>`;
+        }).join('')
+        : '<tr><td class="vazio">Nenhuma categoria.</td></tr>';
+}
+
+async function salvarCategoria(ev) {
+    ev.preventDefault();
+    const nome = $('cat-nome').value.trim();
+    if (categorias.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
+        return avisar('Essa categoria já existe.', 'erro');
+    }
+    const pin = await pedirPin(`Adicionar a categoria ${nome}?`);
+    if (pin === null) return;
+    try {
+        await Banco.salvarCategoria(pin, nome);
+        $('cat-nome').value = '';
+        avisar('Categoria adicionada.', 'ok');
+        await carregar();
+    } catch (e) {
+        avisar(e.message, 'erro');
+    }
+}
+
+async function excluirCategoria(id) {
+    const c = categorias.find(x => x.id === id);
+    const pin = await pedirPin(`Excluir a categoria ${c.nome}? Os produtos dela ficam sem categoria.`);
+    if (pin === null) return;
+    try {
+        await Banco.excluirCategoria(pin, id);
+        avisar('Categoria excluída.', 'ok');
+        await carregar();
+    } catch (e) {
+        avisar(e.message, 'erro');
+    }
+}
+
+
+// ---------- relatório ----------
+
+function mostrarRelatorio() {
+    const dias = Number($('abc-dias').value);
+    const { linhas, total } = Estoque.curvaABC(produtos, movimentacoes, dias);
+    const parados = linhas.filter(l => l.parado).sort((a, b) => b.capitalParado - a.capitalParado);
+    const valorParado = parados.reduce((t, l) => t + Math.max(0, l.capitalParado), 0);
+    const contar = c => linhas.filter(l => l.classe === c).length;
+
+    $('abc-resumo').textContent = `Vendido no período: ${dinheiro(total)}  |  `
+        + `A: ${contar('A')}  B: ${contar('B')}  C: ${contar('C')}  |  `
+        + `${parados.length} parado(s), ${dinheiro(valorParado)} em estoque`;
+
+    $('tab-abc').innerHTML = linhas.length
+        ? linhas.map(l => `<tr>
+            <td class="classe">${l.classe}</td>
+            <td>${esc(l.nome)}</td>
+            <td class="dir">${l.qtdVendida}</td>
+            <td class="dir">${dinheiro(l.valorVendido)}</td>
+            <td class="dir some-cel">${(l.percentualAcumulado * 100).toFixed(1)}%</td>
+        </tr>`).join('')
+        : '<tr><td colspan="5" class="vazio">Sem produtos cadastrados.</td></tr>';
+
+    $('tab-parados').innerHTML = parados.length
+        ? parados.map(l => `<tr>
+            <td>${esc(l.nome)}</td>
+            <td class="dir">${l.saldo}</td>
+            <td class="dir">${dinheiro(Math.max(0, l.capitalParado))}</td>
+            <td class="dir">${l.diasSemSaida === null ? 'nunca' : `${l.diasSemSaida} dias`}</td>
+        </tr>`).join('')
+        : '<tr><td colspan="4" class="vazio">Todos os produtos tiveram saída no período.</td></tr>';
+}
+
+
+// ---------- PIN ----------
+
+// abre a janela do PIN e devolve o PIN digitado (ou null se cancelar).
+// Confere o PIN antes de fechar pra pessoa poder tentar de novo.
+function pedirPin(texto) {
+    const dlg = $('dlg-pin');
+    $('dlg-texto').textContent = texto;
+    $('dlg-pin-campo').value = '';
+    dlg.returnValue = '';
+    dlg.showModal();
+
+    return new Promise(resolve => {
+        $('form-pin').onsubmit = async ev => {
+            ev.preventDefault();
+            const pin = $('dlg-pin-campo').value;
+            try {
+                if (await Banco.verificarPin(pin)) {
+                    dlg.close('ok');
+                    return resolve(pin);
+                }
+                avisar('PIN incorreto.', 'erro');
+                $('dlg-pin-campo').select();
+            } catch (e) {
+                avisar(e.message, 'erro');
+            }
+        };
+        dlg.onclose = () => { if (dlg.returnValue !== 'ok') resolve(null); };
+    });
+}
+
+
+// ---------- início ----------
+
+$('form-mov').addEventListener('submit', salvarMovimentacao);
+document.querySelectorAll('input[name=tipo]').forEach(r => r.addEventListener('change', trocouTipo));
+$('mov-busca').addEventListener('input', mostrarListaLancar);
+$('mov-produto').addEventListener('change', mostrarSaldoSelecionado);
+$('hist-dias').addEventListener('change', mostrarHistorico);
+
+$('btn-novo').addEventListener('click', () => abrirFormProduto(null));
+$('p-cancelar').addEventListener('click', fecharFormProduto);
+$('form-produto').addEventListener('submit', salvarProduto);
+$('prod-busca').addEventListener('input', mostrarProdutos);
+$('prod-filtro').addEventListener('change', mostrarProdutos);
+$('form-categoria').addEventListener('submit', salvarCategoria);
+
+$('abc-dias').addEventListener('change', mostrarRelatorio);
+$('pos-abas').addEventListener('click', filtrarPainel);
+$('pos-busca').addEventListener('input', mostrarPainel);
+
+trocouTipo();
+abrirTela();
+carregar();

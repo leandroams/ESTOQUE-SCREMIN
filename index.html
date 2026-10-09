@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estoque - Distribuidora Scremin</title>
+<link rel="icon" href="img/logo.png">
+<link rel="stylesheet" href="css/sistema.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+</head>
+<body>
+
+<header class="barra">
+    <div class="centro">
+        <a href="#painel" class="logo">
+            <img src="img/logo.png" alt="Scremin Distribuidora">
+            <span>
+                <b>Distribuidora Scremin</b>
+                <small>Controle de estoque</small>
+            </span>
+        </a>
+        <nav id="menu">
+            <a href="#painel" data-tela="painel">Painel</a>
+            <a href="#lancar" data-tela="lancar">Lançar</a>
+            <a href="#produtos" data-tela="produtos">Produtos</a>
+            <a href="#relatorio" data-tela="relatorio">Relatório</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+
+<!-- PAINEL -->
+<section id="tela-painel" class="tela">
+    <div class="cabecalho">
+        <div>
+            <h1>Posição do estoque</h1>
+            <p class="sub" id="hoje"></p>
+        </div>
+        <div>
+            <button type="button" class="btn verde" onclick="lancarDireto('entrada')">Entrada</button>
+            <button type="button" class="btn vermelho" onclick="lancarDireto('saida')">Saída</button>
+        </div>
+    </div>
+
+    <div class="resumo">
+        <div><small>Itens cadastrados</small><b id="r-itens">-</b></div>
+        <div><small>Unidades em estoque</small><b id="r-unidades">-</b></div>
+        <div><small>Valor em estoque (custo)</small><b id="r-valor">-</b></div>
+        <div class="alerta"><small>Abaixo do mínimo</small><b id="r-repor">-</b></div>
+        <div><small>Movimentado hoje</small><b id="r-hoje">-</b></div>
+    </div>
+
+    <div class="grade">
+        <div class="grade-topo">
+            <div class="abas" id="pos-abas">
+                <button type="button" data-filtro="todos" class="ativo">Todos <span id="c-todos"></span></button>
+                <button type="button" data-filtro="baixo">Estoque baixo <span id="c-baixo"></span></button>
+                <button type="button" data-filtro="zerado">Zerados <span id="c-zerado"></span></button>
+            </div>
+            <input type="search" id="pos-busca" placeholder="Pesquisar por nome ou código">
+        </div>
+        <div class="grade-tabela">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cód.</th>
+                        <th>Descrição</th>
+                        <th class="some-cel">Categoria</th>
+                        <th class="dir">Saldo</th>
+                        <th class="dir some-cel">Mín.</th>
+                        <th>Situação</th>
+                        <th class="dir some-cel">Valor</th>
+                        <th class="dir some-cel">Última mov.</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="tab-posicao"></tbody>
+            </table>
+        </div>
+        <div class="grade-rodape" id="pos-rodape"></div>
+    </div>
+
+    <h2>Últimos lançamentos</h2>
+    <div class="grade">
+        <div class="grade-tabela">
+            <table>
+                <thead><tr><th>Data</th><th>Tipo</th><th>Produto</th><th class="dir">Qtd</th><th class="dir">Saldo após</th></tr></thead>
+                <tbody id="tab-ultimas"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- LANÇAR ENTRADA / SAÍDA -->
+<section id="tela-lancar" class="tela">
+    <h1>Lançar movimentação</h1>
+    <form id="form-mov" class="cartao">
+        <div class="tipo">
+            <label><input type="radio" name="tipo" value="saida" checked> Saída</label>
+            <label><input type="radio" name="tipo" value="entrada"> Entrada</label>
+        </div>
+
+        <label for="mov-busca">Produto</label>
+        <input type="search" id="mov-busca" placeholder="Buscar..." autocomplete="off">
+        <select id="mov-produto" size="6" required></select>
+        <p id="mov-saldo" class="info"></p>
+
+        <div class="linha">
+            <div>
+                <label for="mov-qtd">Quantidade</label>
+                <input type="number" id="mov-qtd" min="1" step="1" value="1" required>
+            </div>
+            <div class="largo">
+                <label for="mov-obs">Observação</label>
+                <input type="text" id="mov-obs" maxlength="120">
+            </div>
+        </div>
+
+        <button type="submit" id="mov-salvar" class="btn verde">Salvar saída</button>
+    </form>
+
+    <h2>Histórico
+        <select id="hist-dias" class="pequeno">
+            <option value="1">hoje</option>
+            <option value="7">7 dias</option>
+            <option value="30">30 dias</option>
+        </select>
+    </h2>
+    <div class="cartao-lista">
+        <table>
+            <thead><tr><th>Produto</th><th>Tipo</th><th class="dir">Qtd</th><th class="dir">Data</th></tr></thead>
+            <tbody id="tab-historico"></tbody>
+        </table>
+    </div>
+</section>
+
+<!-- PRODUTOS -->
+<section id="tela-produtos" class="tela">
+    <div class="cabecalho">
+        <h1>Produtos</h1>
+        <button type="button" id="btn-novo" class="btn vermelho">+ Novo produto</button>
+    </div>
+
+    <form id="form-produto" class="cartao escondido">
+        <input type="hidden" id="p-id">
+        <div class="linha">
+            <div class="largo">
+                <label for="p-nome">Nome</label>
+                <input type="text" id="p-nome" maxlength="80" required>
+            </div>
+            <div>
+                <label for="p-categoria">Categoria</label>
+                <select id="p-categoria"></select>
+            </div>
+        </div>
+        <div class="linha">
+            <div>
+                <label for="p-custo">Custo (R$)</label>
+                <input type="number" id="p-custo" min="0" step="0.01" required>
+            </div>
+            <div>
+                <label for="p-venda">Venda (R$)</label>
+                <input type="number" id="p-venda" min="0" step="0.01" required>
+            </div>
+            <div>
+                <label for="p-minimo">Estoque mínimo</label>
+                <input type="number" id="p-minimo" min="0" step="1" required>
+            </div>
+            <div>
+                <label for="p-pin">PIN</label>
+                <input type="password" id="p-pin" inputmode="numeric" autocomplete="off" required>
+            </div>
+        </div>
+        <button type="submit" class="btn verde">Salvar</button>
+        <button type="button" id="p-cancelar" class="btn cinza">Cancelar</button>
+    </form>
+
+    <div class="filtros">
+        <input type="search" id="prod-busca" placeholder="Buscar produto">
+        <select id="prod-filtro"></select>
+    </div>
+
+    <div class="cartao-lista">
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Produto</th>
+                    <th class="some-cel">Categoria</th>
+                    <th class="dir">Saldo</th>
+                    <th class="dir">Mín.</th>
+                    <th class="dir some-cel">Custo</th>
+                    <th class="dir some-cel">Venda</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="tab-produtos"></tbody>
+        </table>
+    </div>
+
+    <h2>Categorias</h2>
+    <form id="form-categoria" class="filtros">
+        <input type="text" id="cat-nome" placeholder="Nova categoria" maxlength="40" required>
+        <button type="submit" class="btn">Adicionar</button>
+    </form>
+    <div class="cartao-lista">
+        <table>
+            <tbody id="tab-categorias"></tbody>
+        </table>
+    </div>
+</section>
+
+<!-- RELATÓRIO -->
+<section id="tela-relatorio" class="tela">
+    <div class="cabecalho">
+        <h1>Relatório</h1>
+    </div>
+    <h2>Curva ABC
+        <select id="abc-dias" class="pequeno">
+            <option value="30">30 dias</option>
+            <option value="60">60 dias</option>
+            <option value="90">90 dias</option>
+        </select>
+        <button type="button" class="btn pequeno cinza nao-imprime" onclick="window.print()">Imprimir</button>
+    </h2>
+    <p class="info" id="abc-resumo"></p>
+    <div class="cartao-lista">
+        <table>
+            <thead>
+                <tr><th>Classe</th><th>Produto</th><th class="dir">Vendido</th><th class="dir">Valor</th><th class="dir some-cel">% acum.</th></tr>
+            </thead>
+            <tbody id="tab-abc"></tbody>
+        </table>
+    </div>
+
+    <h2>Produtos parados</h2>
+    <div class="cartao-lista">
+        <table>
+            <thead><tr><th>Produto</th><th class="dir">Saldo</th><th class="dir">Valor parado</th><th class="dir">Última saída</th></tr></thead>
+            <tbody id="tab-parados"></tbody>
+        </table>
+    </div>
+</section>
+
+</main>
+
+<dialog id="dlg-pin">
+    <form id="form-pin">
+        <p id="dlg-texto"></p>
+        <label for="dlg-pin-campo">PIN</label>
+        <input type="password" id="dlg-pin-campo" inputmode="numeric" autocomplete="off">
+        <div class="botoes">
+            <button type="button" class="btn cinza" onclick="this.closest('dialog').close()">Cancelar</button>
+            <button type="submit" class="btn vermelho">Confirmar</button>
+        </div>
+    </form>
+</dialog>
+
+<div id="aviso"></div>
+
+<script src="js/config.js"></script>
+<script src="js/estoque.js"></script>
+<script src="js/banco.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

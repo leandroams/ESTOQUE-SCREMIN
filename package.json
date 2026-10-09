@@ -1,0 +1,10 @@
+{
+  "name": "estoque-distribuidora-scremin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Controle de estoque da Distribuidora Scremin (projeto de prestação de serviço - ADS)",
+  "scripts": {
+    "test": "node --test testes/estoque.test.js",
+    "start": "npx --yes serve ."
+  }
+}
