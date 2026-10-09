@@ -38,6 +38,11 @@ const Banco = {
         return buscarTodos('movimentacoes', 'criado_em');
     },
 
+    // saldo de cada produto calculado no banco (view vw_saldos)
+    listarSaldos() {
+        return buscarTodos('vw_saldos', 'produto_id');
+    },
+
     async registrarMovimentacao(produto_id, tipo, quantidade, observacao) {
         const { error } = await sb.from('movimentacoes')
             .insert({ produto_id, tipo, quantidade, observacao: observacao || null });

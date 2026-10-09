@@ -14,12 +14,16 @@ const nomeCategoria = id => (categorias.find(c => c.id === id) || {}).nome || '-
 
 async function carregar() {
     try {
-        [categorias, produtos, movimentacoes] = await Promise.all([
+        let listaSaldos;
+        [categorias, produtos, movimentacoes, listaSaldos] = await Promise.all([
             Banco.listarCategorias(),
             Banco.listarProdutos(),
-            Banco.listarMovimentacoes()
+            Banco.listarMovimentacoes(),
+            Banco.listarSaldos()
         ]);
-        saldos = Estoque.calcularSaldos(movimentacoes);
+        // o saldo vem calculado do banco (view vw_saldos), a tela não soma nada
+        saldos = {};
+        listaSaldos.forEach(s => { saldos[s.produto_id] = { saldo: s.saldo, ultimaSaida: s.ultima_saida }; });
         mostrarPainel();
         mostrarListaLancar();
         mostrarHistorico();
@@ -83,8 +87,9 @@ function mostrarPainel() {
         (p.nome.toLowerCase().includes(termo) || codigo(p.id).includes(termo)));
 
     const nomeSituacao = { ok: 'Normal', baixo: 'Baixo', zerado: 'Zerado' };
-    $('tab-posicao').innerHTML = lista.length
-        ? lista.map(p => `<tr>
+    const pagina = paginar('posicao', lista, mostrarPainel);
+    $('tab-posicao').innerHTML = pagina.length
+        ? pagina.map(p => `<tr>
             <td class="cod">${codigo(p.id)}</td>
             <td>${esc(p.nome)}</td>
             <td class="some-cel">${esc(nomeCategoria(p.categoria_id))}</td>
@@ -98,7 +103,6 @@ function mostrarPainel() {
             </td>
           </tr>`).join('')
         : '<tr><td colspan="9" class="vazio">Nenhum produto encontrado.</td></tr>';
-    $('pos-rodape').textContent = `${lista.length} de ${linhas.length} produtos`;
 
     // saldo depois de cada lançamento, pra conferir
     const corrente = {};
@@ -125,6 +129,7 @@ function filtrarPainel(ev) {
     const botao = ev.target.closest('button');
     if (!botao) return;
     filtroPainel = botao.dataset.filtro;
+    primeiraPagina('posicao');
     document.querySelectorAll('#pos-abas button').forEach(b => b.classList.toggle('ativo', b === botao));
     mostrarPainel();
 }
@@ -218,8 +223,9 @@ function mostrarHistorico() {
     inicio.setHours(0, 0, 0, 0);
     inicio.setDate(inicio.getDate() - (dias - 1));
     const lista = movimentacoes.filter(m => new Date(m.criado_em) >= inicio).reverse();
-    $('tab-historico').innerHTML = lista.length
-        ? lista.map(linhaMov).join('')
+    const pagina = paginar('historico', lista, mostrarHistorico);
+    $('tab-historico').innerHTML = pagina.length
+        ? pagina.map(linhaMov).join('')
         : '<tr><td colspan="4" class="vazio">Nenhuma movimentação no período.</td></tr>';
 }
 
@@ -243,8 +249,9 @@ function mostrarProdutos() {
         return true;
     });
 
-    $('tab-produtos').innerHTML = lista.length
-        ? lista.map(p => {
+    const pagina = paginar('produtos', lista, mostrarProdutos);
+    $('tab-produtos').innerHTML = pagina.length
+        ? pagina.map(p => {
             const saldo = saldoDe(p.id);
             return `<tr class="${Estoque.situacaoEstoque(saldo, p.estoque_minimo)}">
                 <td>${esc(p.nome)}</td>
@@ -382,8 +389,9 @@ function mostrarRelatorio() {
         + `A: ${contar('A')}  B: ${contar('B')}  C: ${contar('C')}  |  `
         + `${parados.length} parado(s), ${dinheiro(valorParado)} em estoque`;
 
-    $('tab-abc').innerHTML = linhas.length
-        ? linhas.map(l => `<tr>
+    const paginaAbc = paginar('abc', linhas, mostrarRelatorio);
+    $('tab-abc').innerHTML = paginaAbc.length
+        ? paginaAbc.map(l => `<tr>
             <td class="classe">${l.classe}</td>
             <td>${esc(l.nome)}</td>
             <td class="dir">${l.qtdVendida}</td>
@@ -392,8 +400,9 @@ function mostrarRelatorio() {
         </tr>`).join('')
         : '<tr><td colspan="5" class="vazio">Sem produtos cadastrados.</td></tr>';
 
-    $('tab-parados').innerHTML = parados.length
-        ? parados.map(l => `<tr>
+    const paginaParados = paginar('parados', parados, mostrarRelatorio);
+    $('tab-parados').innerHTML = paginaParados.length
+        ? paginaParados.map(l => `<tr>
             <td>${esc(l.nome)}</td>
             <td class="dir">${l.saldo}</td>
             <td class="dir">${dinheiro(Math.max(0, l.capitalParado))}</td>
@@ -440,18 +449,29 @@ $('form-mov').addEventListener('submit', salvarMovimentacao);
 document.querySelectorAll('input[name=tipo]').forEach(r => r.addEventListener('change', trocouTipo));
 $('mov-busca').addEventListener('input', mostrarListaLancar);
 $('mov-produto').addEventListener('change', mostrarSaldoSelecionado);
-$('hist-dias').addEventListener('change', mostrarHistorico);
+$('hist-dias').addEventListener('change', () => { primeiraPagina('historico'); mostrarHistorico(); });
 
 $('btn-novo').addEventListener('click', () => abrirFormProduto(null));
 $('p-cancelar').addEventListener('click', fecharFormProduto);
 $('form-produto').addEventListener('submit', salvarProduto);
-$('prod-busca').addEventListener('input', mostrarProdutos);
-$('prod-filtro').addEventListener('change', mostrarProdutos);
+$('prod-busca').addEventListener('input', () => { primeiraPagina('produtos'); mostrarProdutos(); });
+$('prod-filtro').addEventListener('change', () => { primeiraPagina('produtos'); mostrarProdutos(); });
 $('form-categoria').addEventListener('submit', salvarCategoria);
 
-$('abc-dias').addEventListener('change', mostrarRelatorio);
+$('abc-dias').addEventListener('change', () => { primeiraPagina('abc'); primeiraPagina('parados'); mostrarRelatorio(); });
 $('pos-abas').addEventListener('click', filtrarPainel);
-$('pos-busca').addEventListener('input', mostrarPainel);
+$('pos-busca').addEventListener('input', () => { primeiraPagina('posicao'); mostrarPainel(); });
+
+// na impressão do relatório sai a lista inteira, não só a página aberta
+let tamanhosAntes = {};
+window.addEventListener('beforeprint', () => {
+    ['abc', 'parados'].forEach(n => { tamanhosAntes[n] = paginas[n].tamanho; paginas[n].tamanho = 0; });
+    mostrarRelatorio();
+});
+window.addEventListener('afterprint', () => {
+    ['abc', 'parados'].forEach(n => { paginas[n].tamanho = tamanhosAntes[n]; });
+    mostrarRelatorio();
+});
 
 trocouTipo();
 abrirTela();
