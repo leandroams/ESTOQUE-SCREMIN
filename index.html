@@ -78,7 +78,7 @@
                 <tbody id="tab-posicao"></tbody>
             </table>
         </div>
-        <div class="grade-rodape" id="pos-rodape"></div>
+        <div class="paginacao" id="pag-posicao"></div>
     </div>
 
     <h2>Últimos lançamentos</h2>
@@ -127,11 +127,12 @@
             <option value="30">30 dias</option>
         </select>
     </h2>
-    <div class="cartao-lista">
+    <div class="grade">
         <table>
             <thead><tr><th>Produto</th><th>Tipo</th><th class="dir">Qtd</th><th class="dir">Data</th></tr></thead>
             <tbody id="tab-historico"></tbody>
         </table>
+        <div class="paginacao" id="pag-historico"></div>
     </div>
 </section>
 
@@ -181,8 +182,7 @@
         <select id="prod-filtro"></select>
     </div>
 
-    <div class="cartao-lista">
-
+    <div class="grade">
         <table>
             <thead>
                 <tr>
@@ -197,6 +197,7 @@
             </thead>
             <tbody id="tab-produtos"></tbody>
         </table>
+        <div class="paginacao" id="pag-produtos"></div>
     </div>
 
     <h2>Categorias</h2>
@@ -204,7 +205,7 @@
         <input type="text" id="cat-nome" placeholder="Nova categoria" maxlength="40" required>
         <button type="submit" class="btn">Adicionar</button>
     </form>
-    <div class="cartao-lista">
+    <div class="grade">
         <table>
             <tbody id="tab-categorias"></tbody>
         </table>
@@ -225,21 +226,23 @@
         <button type="button" class="btn pequeno cinza nao-imprime" onclick="window.print()">Imprimir</button>
     </h2>
     <p class="info" id="abc-resumo"></p>
-    <div class="cartao-lista">
+    <div class="grade">
         <table>
             <thead>
                 <tr><th>Classe</th><th>Produto</th><th class="dir">Vendido</th><th class="dir">Valor</th><th class="dir some-cel">% acum.</th></tr>
             </thead>
             <tbody id="tab-abc"></tbody>
         </table>
+        <div class="paginacao nao-imprime" id="pag-abc"></div>
     </div>
 
     <h2>Produtos parados</h2>
-    <div class="cartao-lista">
+    <div class="grade">
         <table>
             <thead><tr><th>Produto</th><th class="dir">Saldo</th><th class="dir">Valor parado</th><th class="dir">Última saída</th></tr></thead>
             <tbody id="tab-parados"></tbody>
         </table>
+        <div class="paginacao nao-imprime" id="pag-parados"></div>
     </div>
 </section>
 
@@ -260,6 +263,7 @@
 <div id="aviso"></div>
 
 <script src="js/config.js"></script>
+<script src="js/util.js"></script>
 <script src="js/estoque.js"></script>
 <script src="js/banco.js"></script>
 <script src="js/app.js"></script>

@@ -85,14 +85,13 @@ h2 {
 
 
 /* ===== Cartões ===== */
-.cartao, .cartao-lista {
+.cartao {
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04);
     margin-bottom: 15px;
 }
 .cartao { padding: 20px; }
-.cartao-lista { padding: 6px 14px; overflow-x: auto; }
 
 /* ===== Painel: resumo e grade de estoque ===== */
 .resumo {
@@ -114,7 +113,7 @@ h2 {
     border: 1px solid #e3e5e8;
     border-radius: 6px;
     margin-bottom: 15px;
-    overflow: hidden;
+    overflow-x: auto;
 }
 .grade-topo {
     display: flex;
@@ -150,7 +149,22 @@ h2 {
 .grade td { padding: 7px 10px; border-bottom: 1px solid #eef0f2; }
 .grade tbody tr:nth-child(even) { background: #fafbfc; }
 .grade tbody tr:hover { background: #fff6f6; }
-.grade-rodape { padding: 8px 10px; font-size: 12px; color: #888; border-top: 1px solid #e3e5e8; background: #f6f7f9; }
+.paginacao {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: #777;
+    border-top: 1px solid #e3e5e8;
+}
+.grade .paginacao { background: #f6f7f9; }
+.paginacao label { display: flex; align-items: center; gap: 6px; margin: 0 auto 0 0; font-weight: 400; color: #777; }
+.paginacao select { width: auto; padding: 4px 8px; font-size: 13px; }
+.paginacao .btn { margin: 0; padding: 5px 12px; font-size: 13px; background: #fff; color: #444; border: 1px solid #ddd; border-radius: 4px; }
+.paginacao .btn:hover { transform: none; background: #f0f2f5; }
 td.cod { color: #888; font-family: Consolas, monospace; font-size: 12.5px; }
 td.forte { font-weight: 600; }
 
